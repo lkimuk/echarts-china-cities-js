@@ -13,17 +13,6 @@
         max-width: 1200px;
         margin: 0 auto;
       }
-      .title {
-        text-align: center;
-        color: #333;
-        margin-bottom: 10px;
-      }
-      .subtitle {
-        text-align: center;
-        color: #999;
-        margin-bottom: 30px;
-        font-size: 14px;
-      }
       .toolbar {
         display: flex;
         justify-content: flex-end;
@@ -56,8 +45,6 @@
   </head>
   <body>
     <div class="container">
-      <h1 class="title">📊 北京各区2024年常住人口分布（万人）</h1>
-      <p class="subtitle">Distribution of Resident Population in 2024 (10000 persons)</p>
       <div class="toolbar">
         <button id="export-image" class="export-btn">导出高清图</button>
       </div>
@@ -165,19 +152,6 @@
       const chart = echarts.init(document.getElementById('population-map'));
 
       const option = {
-        title: {
-          text: '北京各区人口分布',
-          left: 'center',
-          textStyle: {
-            fontSize: 16,
-            color: '#333'
-          },
-          subtext: '数据单位：万人',
-          subtextStyle: {
-            fontSize: 12,
-            color: '#999'
-          }
-        },
         tooltip: {
           trigger: 'item',
           formatter: function (params) {
@@ -189,22 +163,6 @@
               return params.name;
             }
             return params;
-          }
-        },
-        visualMap: {
-          seriesIndex: 1,
-          type: 'piecewise',
-          pieces: [
-            { min: 200, label: '高人口（200万及以上）', color: '#f3a57c' },
-            { min: 100, max: 199.9, label: '中人口（100万-199.9万）', color: '#f5d0a2' },
-            { max: 99.9, label: '低人口（100万以下）', color: '#b3ca9c' }
-          ],
-          realtime: true,
-          calculable: false,
-          left: 'left',
-          bottom: '20%',
-          textStyle: {
-            color: '#333'
           }
         },
         series: [
