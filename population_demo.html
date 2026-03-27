@@ -103,67 +103,6 @@
         return Math.abs(area / 2);
       }
 
-      function normalizeCoordinate(point) {
-        return point.map(function (value) {
-          return Number(value).toFixed(6);
-        }).join(',');
-      }
-
-      function buildEdgeKey(start, end) {
-        const startKey = normalizeCoordinate(start);
-        const endKey = normalizeCoordinate(end);
-        return startKey < endKey ? `${startKey}|${endKey}` : `${endKey}|${startKey}`;
-      }
-
-      function buildInternalBoundaryLines() {
-        const districtMap = echarts.getMap('北京');
-        if (!districtMap || !districtMap.geoJSON || !districtMap.geoJSON.features) {
-          return [];
-        }
-
-        const edgeCounts = new Map();
-        const edgePaths = new Map();
-
-        function collectRingEdges(ring) {
-          if (!ring || ring.length < 2) {
-            return;
-          }
-
-          for (let i = 0; i < ring.length - 1; i++) {
-            const start = ring[i];
-            const end = ring[i + 1];
-            const key = buildEdgeKey(start, end);
-            edgeCounts.set(key, (edgeCounts.get(key) || 0) + 1);
-
-            if (!edgePaths.has(key)) {
-              edgePaths.set(key, [start, end]);
-            }
-          }
-        }
-
-        districtMap.geoJSON.features.forEach(function (feature) {
-          const geometry = feature.geometry || {};
-
-          if (geometry.type === 'Polygon') {
-            geometry.coordinates.forEach(collectRingEdges);
-          }
-
-          if (geometry.type === 'MultiPolygon') {
-            geometry.coordinates.forEach(function (polygon) {
-              polygon.forEach(collectRingEdges);
-            });
-          }
-        });
-
-        return Array.from(edgeCounts.entries())
-          .filter(function (entry) {
-            return entry[1] > 1;
-          })
-          .map(function (entry) {
-            return { coords: edgePaths.get(entry[0]) };
-          });
-      }
-
       function registerLargestOutlineMap() {
         const outlineMap = echarts.getMap('北京轮廓');
         if (!outlineMap || !outlineMap.geoJSON || !outlineMap.geoJSON.features) {
@@ -221,7 +160,6 @@
       }
 
       const outlineMapName = registerLargestOutlineMap();
-      const internalBoundaryLines = buildInternalBoundaryLines();
 
       // 初始化图表
       const chart = echarts.init(document.getElementById('population-map'));
@@ -251,24 +189,6 @@
           ],
           realtime: true,
           calculable: false
-        },
-        geo: {
-          map: '北京',
-          roam: false,
-          silent: true,
-          itemStyle: {
-            areaColor: 'rgba(0, 0, 0, 0)',
-            borderColor: 'rgba(0, 0, 0, 0)'
-          },
-          emphasis: {
-            itemStyle: {
-              areaColor: 'rgba(0, 0, 0, 0)',
-              borderColor: 'rgba(0, 0, 0, 0)'
-            }
-          },
-          label: {
-            show: false
-          }
         },
         series: [
           {
@@ -311,14 +231,13 @@
             z: 2,
             itemStyle: {
               normal: {
-                borderColor: 'rgba(0, 0, 0, 0)',
-                borderWidth: 0
+                borderColor: '#fff',
+                borderWidth: 0.5
               },
               emphasis: {
                 shadowBlur: 10,
                 shadowColor: 'rgba(0, 0, 0, 0.3)',
-                borderColor: 'rgba(0, 0, 0, 0)',
-                borderWidth: 0
+                borderColor: '#fff'
               }
             },
             label: {
@@ -363,20 +282,6 @@
             data: populationData
           },
           {
-            name: '内部边界',
-            type: 'lines',
-            coordinateSystem: 'geo',
-            polyline: false,
-            silent: true,
-            z: 2.5,
-            lineStyle: {
-              color: '#ffffff',
-              width: 0.5,
-              opacity: 1
-            },
-            data: internalBoundaryLines
-          },
-          {
             name: '外框描边',
             type: 'map',
             mapType: outlineMapName,
@@ -387,12 +292,12 @@
               normal: {
                 areaColor: 'rgba(0, 0, 0, 0)',
                 borderColor: outerBorderColor,
-                borderWidth: 2.5
+                borderWidth: 4
               },
               emphasis: {
                 areaColor: 'rgba(0, 0, 0, 0)',
                 borderColor: outerBorderColor,
-                borderWidth: 2.5
+                borderWidth: 4
               }
             },
             label: {
