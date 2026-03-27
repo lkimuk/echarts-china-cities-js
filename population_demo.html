@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>北京各区2024年常住人口分布</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .title {
+        text-align: center;
+        color: #333;
+        margin-bottom: 10px;
+      }
+      .subtitle {
+        text-align: center;
+        color: #999;
+        margin-bottom: 30px;
+        font-size: 14px;
+      }
+      .toolbar {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 12px;
+      }
+      .export-btn {
+        border: 1px solid #3388b0;
+        background: #fff;
+        color: #3388b0;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .export-btn:hover {
+        background: #3388b0;
+        color: #fff;
+      }
+      .citymap {
+        width: 100%;
+        height: 700px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+    </style>
+    <script src="./echarts.min.js"></script>
+    <script src="./js/shape-with-internal-borders/zhi2_xia2_shi4_beijing.js"></script>
+    <script src="./js/shape-only/zhi2_xia2_shi4_beijing.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="title">📊 北京各区2024年常住人口分布（万人）</h1>
+      <p class="subtitle">Distribution of Resident Population in 2024 (10000 persons)</p>
+      <div class="toolbar">
+        <button id="export-image" class="export-btn">导出高清图</button>
+      </div>
+      <div id="population-map" class="citymap"></div>
+    </div>
+
+    <script>
+      // 北京各区2024年常住人口数据（万人）
+      const populationData = [
+        { name: '东城区', value: 70.1 },
+        { name: '西城区', value: 109.5 },
+        { name: '朝阳区', value: 343.9 },
+        { name: '丰台区', value: 201.1 },
+        { name: '石景山区', value: 56.1 },
+        { name: '海淀区', value: 312.2 },
+        { name: '门头沟区', value: 39.6 },
+        { name: '房山区', value: 131.1 },
+        { name: '通州区', value: 184.6 },
+        { name: '顺义区', value: 132.6 },
+        { name: '昌平区', value: 227.0 },
+        { name: '大兴区', value: 199.5 },
+        { name: '怀柔区', value: 43.9 },
+        { name: '平谷区', value: 45.5 },
+        { name: '密云区', value: 52.3 },
+        { name: '延庆区', value: 34.2 }
+      ];
+
+      const hideValueLabelDistricts = new Set(['东城区', '西城区']);
+      const outerBorderColor = '#3388b0';
+
+      function polygonArea(ring) {
+        if (!ring || ring.length < 3) {
+          return 0;
+        }
+
+        let area = 0;
+        for (let i = 0; i < ring.length; i++) {
+          const current = ring[i];
+          const next = ring[(i + 1) % ring.length];
+          area += current[0] * next[1] - next[0] * current[1];
+        }
+
+        return Math.abs(area / 2);
+      }
+
+      function registerLargestOutlineMap() {
+        const outlineMap = echarts.getMap('北京轮廓');
+        if (!outlineMap || !outlineMap.geoJSON || !outlineMap.geoJSON.features) {
+          return '北京轮廓';
+        }
+
+        let largestPolygon = null;
+        let largestArea = 0;
+
+        outlineMap.geoJSON.features.forEach(function (feature) {
+          const geometry = feature.geometry || {};
+
+          if (geometry.type === 'Polygon' && geometry.coordinates[0]) {
+            const area = polygonArea(geometry.coordinates[0]);
+            if (area > largestArea) {
+              largestArea = area;
+              largestPolygon = geometry.coordinates;
+            }
+          }
+
+          if (geometry.type === 'MultiPolygon') {
+            geometry.coordinates.forEach(function (polygon) {
+              if (!polygon[0]) {
+                return;
+              }
+
+              const area = polygonArea(polygon[0]);
+              if (area > largestArea) {
+                largestArea = area;
+                largestPolygon = polygon;
+              }
+            });
+          }
+        });
+
+        if (!largestPolygon) {
+          return '北京轮廓';
+        }
+
+        echarts.registerMap('北京外框图层', {
+          type: 'FeatureCollection',
+          features: [
+            {
+              type: 'Feature',
+              properties: { name: '北京' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: largestPolygon
+              }
+            }
+          ]
+        });
+
+        return '北京外框图层';
+      }
+
+      const outlineMapName = registerLargestOutlineMap();
+
+      // 初始化图表
+      const chart = echarts.init(document.getElementById('population-map'));
+
+      const option = {
+        title: {
+          text: '北京各区人口分布',
+          left: 'center',
+          textStyle: {
+            fontSize: 16,
+            color: '#333'
+          },
+          subtext: '数据单位：万人',
+          subtextStyle: {
+            fontSize: 12,
+            color: '#999'
+          }
+        },
+        tooltip: {
+          trigger: 'item',
+          formatter: function (params) {
+            if (params.componentSubType === 'map') {
+              const data = populationData.find(d => d.name === params.name);
+              if (data) {
+                return `${params.name}<br/>常住人口: ${data.value}万人`;
+              }
+              return params.name;
+            }
+            return params;
+          }
+        },
+        visualMap: {
+          seriesIndex: 1,
+          type: 'piecewise',
+          pieces: [
+            { min: 200, label: '高人口（200万及以上）', color: '#f3a57c' },
+            { min: 100, max: 199.9, label: '中人口（100万-199.9万）', color: '#f5d0a2' },
+            { max: 99.9, label: '低人口（100万以下）', color: '#b3ca9c' }
+          ],
+          realtime: true,
+          calculable: false,
+          left: 'left',
+          bottom: '20%',
+          textStyle: {
+            color: '#333'
+          }
+        },
+        series: [
+          {
+            name: '外框底层',
+            type: 'map',
+            mapType: outlineMapName,
+            roam: false,
+            silent: true,
+            z: 1,
+            itemStyle: {
+              normal: {
+                areaColor: '#ffffff',
+                borderColor: outerBorderColor,
+                borderWidth: 2.5,
+                shadowBlur: 24,
+                shadowColor: 'rgba(0, 0, 0, 0.28)',
+                shadowOffsetX: 8,
+                shadowOffsetY: 10
+              },
+              emphasis: {
+                areaColor: '#ffffff',
+                borderColor: outerBorderColor,
+                borderWidth: 2.5,
+                shadowBlur: 24,
+                shadowColor: 'rgba(0, 0, 0, 0.28)',
+                shadowOffsetX: 8,
+                shadowOffsetY: 10
+              }
+            },
+            label: {
+              show: false
+            },
+            data: [{ name: '北京', value: 1 }]
+          },
+          {
+            name: '常住人口',
+            type: 'map',
+            mapType: '北京',
+            roam: false,
+            z: 2,
+            itemStyle: {
+              normal: {
+                borderColor: '#fff',
+                borderWidth: 0.5
+              },
+              emphasis: {
+                shadowBlur: 10,
+                shadowColor: 'rgba(0, 0, 0, 0.3)',
+                borderColor: '#fff'
+              }
+            },
+            label: {
+              normal: {
+                show: true,
+                formatter: function (params) {
+                  const data = populationData.find(d => d.name === params.name);
+                  if (data) {
+                    if (hideValueLabelDistricts.has(params.name)) {
+                      return params.name;
+                    }
+                    return `${params.name}\n${data.value}万`;
+                  }
+                  return params.name;
+                },
+                textStyle: {
+                  color: '#333',
+                  fontSize: 9,
+                  fontWeight: 'bold'
+                },
+                lineHeight: 12
+              },
+              emphasis: {
+                show: true,
+                formatter: function (params) {
+                  const data = populationData.find(d => d.name === params.name);
+                  if (data) {
+                    if (hideValueLabelDistricts.has(params.name)) {
+                      return params.name;
+                    }
+                    return `${params.name}\n${data.value}万`;
+                  }
+                  return params.name;
+                },
+                textStyle: {
+                  color: '#000',
+                  fontSize: 10,
+                  fontWeight: 'bold'
+                }
+              }
+            },
+            data: populationData
+          }
+        ]
+      };
+
+      chart.setOption(option);
+
+      document.getElementById('export-image').addEventListener('click', function () {
+        const url = chart.getDataURL({
+          type: 'png',
+          pixelRatio: 4,
+          backgroundColor: '#ffffff',
+          excludeComponents: ['toolbox']
+        });
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'beijing-population-map-hd.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
+
+      // 响应式调整
+      window.addEventListener('resize', function () {
+        chart.resize();
+      });
+    </script>
+  </body>
+</html>
