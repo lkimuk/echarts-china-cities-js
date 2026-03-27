@@ -87,6 +87,42 @@
 
       const hideValueLabelDistricts = new Set(['东城区', '西城区']);
       const outerBorderColor = '#3388b0';
+      const districtLabelPositions = {
+        东城区: [116.418757, 39.917544],
+        西城区: [116.366794, 39.915309],
+        朝阳区: [116.486409, 39.921489],
+        丰台区: [116.286968, 39.863642],
+        石景山区: [116.195445, 39.914601],
+        海淀区: [116.310316, 39.956074],
+        门头沟区: [116.105381, 39.937183],
+        房山区: [116.139157, 39.735535],
+        通州区: [116.658603, 39.902486],
+        顺义区: [116.653525, 40.128936],
+        昌平区: [116.235906, 40.218085],
+        大兴区: [116.338033, 39.728908],
+        怀柔区: [116.637122, 40.324272],
+        平谷区: [117.112335, 40.144783],
+        密云区: [116.843352, 40.377362],
+        延庆区: [115.985006, 40.465325]
+      };
+      const districtLabelOffsets = {
+        东城区: [18, -2],
+        西城区: [-18, -2],
+        朝阳区: [15, -10],
+        丰台区: [0, 10],
+        石景山区: [8, 8],
+        海淀区: [-6, -18],
+        门头沟区: [-84, -18],
+        房山区: [-68, 10],
+        通州区: [18, 48],
+        顺义区: [8, 2],
+        昌平区: [0, -10],
+        大兴区: [18, 30],
+        怀柔区: [-10, -28],
+        平谷区: [10, -15],
+        密云区: [28, -38],
+        延庆区: [20, -2]
+      };
 
       function polygonArea(ring) {
         if (!ring || ring.length < 3) {
@@ -101,6 +137,84 @@
         }
 
         return Math.abs(area / 2);
+      }
+
+      function normalizeCoordinate(point) {
+        return point.map(function (value) {
+          return Number(value).toFixed(6);
+        }).join(',');
+      }
+
+      function buildEdgeKey(start, end) {
+        const startKey = normalizeCoordinate(start);
+        const endKey = normalizeCoordinate(end);
+        return startKey < endKey ? `${startKey}|${endKey}` : `${endKey}|${startKey}`;
+      }
+
+      function buildOuterBoundarySegments() {
+        const districtMap = echarts.getMap('北京');
+        if (!districtMap || !districtMap.geoJSON || !districtMap.geoJSON.features) {
+          return [];
+        }
+
+        const edgeCounts = new Map();
+        const edgePaths = new Map();
+
+        function collectRingEdges(ring) {
+          if (!ring || ring.length < 2) {
+            return;
+          }
+
+          for (let i = 0; i < ring.length - 1; i++) {
+            const start = ring[i];
+            const end = ring[i + 1];
+            const key = buildEdgeKey(start, end);
+            edgeCounts.set(key, (edgeCounts.get(key) || 0) + 1);
+
+            if (!edgePaths.has(key)) {
+              edgePaths.set(key, [start, end]);
+            }
+          }
+        }
+
+        districtMap.geoJSON.features.forEach(function (feature) {
+          const geometry = feature.geometry || {};
+
+          if (geometry.type === 'Polygon') {
+            geometry.coordinates.forEach(collectRingEdges);
+          }
+
+          if (geometry.type === 'MultiPolygon') {
+            geometry.coordinates.forEach(function (polygon) {
+              polygon.forEach(collectRingEdges);
+            });
+          }
+        });
+
+        return Array.from(edgeCounts.entries())
+          .filter(function (entry) {
+            return entry[1] === 1;
+          })
+          .map(function (entry) {
+            return { coords: edgePaths.get(entry[0]) };
+          });
+      }
+
+      function buildDistrictLabelData() {
+        return populationData
+          .map(function (item) {
+            const position = districtLabelPositions[item.name];
+            if (!position) {
+              return null;
+            }
+
+            return {
+              name: item.name,
+              value: position,
+              population: item.value
+            };
+          })
+          .filter(Boolean);
       }
 
       function registerLargestOutlineMap() {
@@ -160,6 +274,8 @@
       }
 
       const outlineMapName = registerLargestOutlineMap();
+      const outerBoundarySegments = buildOuterBoundarySegments();
+      const districtLabelData = buildDistrictLabelData();
 
       // 初始化图表
       const chart = echarts.init(document.getElementById('population-map'));
@@ -189,6 +305,24 @@
           ],
           realtime: true,
           calculable: false
+        },
+        geo: {
+          map: '北京',
+          roam: false,
+          silent: true,
+          itemStyle: {
+            areaColor: 'rgba(0, 0, 0, 0)',
+            borderColor: 'rgba(0, 0, 0, 0)'
+          },
+          emphasis: {
+            itemStyle: {
+              areaColor: 'rgba(0, 0, 0, 0)',
+              borderColor: 'rgba(0, 0, 0, 0)'
+            }
+          },
+          label: {
+            show: false
+          }
         },
         series: [
           {
@@ -241,45 +375,75 @@
               }
             },
             label: {
-              normal: {
-                show: true,
-                formatter: function (params) {
-                  const data = populationData.find(d => d.name === params.name);
-                  if (data) {
-                    if (hideValueLabelDistricts.has(params.name)) {
-                      return params.name;
-                    }
-                    return `${params.name}\n${data.value}万`;
-                  }
-                  return params.name;
-                },
-                textStyle: {
-                  color: '#333',
-                  fontSize: 9,
-                  fontWeight: 'bold'
-                },
-                lineHeight: 12
-              },
-              emphasis: {
-                show: true,
-                formatter: function (params) {
-                  const data = populationData.find(d => d.name === params.name);
-                  if (data) {
-                    if (hideValueLabelDistricts.has(params.name)) {
-                      return params.name;
-                    }
-                    return `${params.name}\n${data.value}万`;
-                  }
-                  return params.name;
-                },
-                textStyle: {
-                  color: '#000',
-                  fontSize: 10,
-                  fontWeight: 'bold'
-                }
-              }
+              show: false
             },
             data: populationData
+          },
+          {
+            name: '区名标签',
+            type: 'custom',
+            coordinateSystem: 'geo',
+            silent: true,
+            z: 2.2,
+            renderItem: function (params, api) {
+              const coord = api.coord([api.value(0), api.value(1)]);
+              const name = api.value(2);
+              const population = api.value(3);
+              const offset = districtLabelOffsets[name] || [0, 0];
+              const text = hideValueLabelDistricts.has(name) ? name : `${name}\n${population}万`;
+
+              return {
+                type: 'text',
+                style: {
+                  x: coord[0] + offset[0],
+                  y: coord[1] + offset[1],
+                  text: text,
+                  fill: '#333',
+                  fontSize: 9,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  textVerticalAlign: 'middle',
+                  lineHeight: 12
+                },
+                silent: true
+              };
+            },
+            data: districtLabelData.map(function (item) {
+              return [item.value[0], item.value[1], item.name, item.population];
+            })
+          },
+          {
+            name: '外框遮挡',
+            type: 'custom',
+            coordinateSystem: 'geo',
+            silent: true,
+            z: 2.5,
+            renderItem: function (params, api) {
+              const start = api.value(0);
+              const end = api.value(1);
+              const startPoint = api.coord(start);
+              const endPoint = api.coord(end);
+
+              return {
+                type: 'line',
+                shape: {
+                  x1: startPoint[0],
+                  y1: startPoint[1],
+                  x2: endPoint[0],
+                  y2: endPoint[1]
+                },
+                style: {
+                  stroke: outerBorderColor,
+                  lineWidth: 5,
+                  lineCap: 'round',
+                  lineJoin: 'round'
+                },
+                silent: true
+              };
+            },
+            data: outerBoundarySegments.map(function (segment) {
+              return [segment.coords[0], segment.coords[1]];
+            })
           },
           {
             name: '外框描边',
@@ -288,17 +452,16 @@
             roam: false,
             silent: true,
             z: 3,
-            zoom: 0.995,
             itemStyle: {
               normal: {
                 areaColor: 'rgba(0, 0, 0, 0)',
                 borderColor: outerBorderColor,
-                borderWidth: 5
+                borderWidth: 2.5
               },
               emphasis: {
                 areaColor: 'rgba(0, 0, 0, 0)',
                 borderColor: outerBorderColor,
-                borderWidth: 5
+                borderWidth: 2.5
               }
             },
             label: {
