@@ -1,5 +1,9 @@
 # echarts-china-cities-js
 
+## 桌面客户端
+
+新增 [城市图志 Electron 客户端](desktop/README.md)，支持离线选城市、搜索、区县边界与纯轮廓切换、自定义地图样式和高清 PNG 导出。运行方式：在 `desktop/` 目录执行 `npm ci`、`npm start`；Windows 安装包使用 `npm run dist` 构建。
+
 [![Build Status](https://travis-ci.org/echarts-maps/echarts-china-cities-js.svg?branch=master)](https://travis-ci.org/echarts-maps/echarts-china-cities-js) [![npm version](https://badge.fury.io/js/echarts-china-cities-js.svg)](https://badge.fury.io/js/echarts-china-cities-js)
 
 It collects all geo-jsons in javascript of all 392 provincial cities
