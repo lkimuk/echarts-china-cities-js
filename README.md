@@ -2,7 +2,7 @@
 
 ## 桌面客户端
 
-新增 [城市图志 Electron 客户端](desktop/README.md)，天地图离线主库包含全国、34 个省级、368 个城市层及 2,890 个区县层地图，仅使用这一套数据。支持四级导航、搜索、行政区边界与纯轮廓切换、自定义地图样式和高清 PNG 导出。运行方式：在 `desktop/` 目录执行 `npm ci`、`npm start`；Windows 安装包使用 `npm run dist` 构建。数据来源及使用说明见 [离线数据文档](desktop/data/README.md)。原有 JavaScript 城市图库保持原样。
+新增 [江城子 Electron 客户端](desktop/README.md)，天地图离线主库包含全国、34 个省级、368 个城市层及 2,890 个区县层地图，仅使用这一套数据。支持四级导航、搜索、行政区边界与纯轮廓切换、自定义地图样式和高清 PNG 导出。运行方式：在 `desktop/` 目录执行 `npm ci`、`npm start`；Windows 安装包使用 `npm run dist` 构建。数据来源及使用说明见 [离线数据文档](desktop/data/README.md)。原有 JavaScript 城市图库保持原样。
 
 [![Build Status](https://travis-ci.org/echarts-maps/echarts-china-cities-js.svg?branch=master)](https://travis-ci.org/echarts-maps/echarts-china-cities-js) [![npm version](https://badge.fury.io/js/echarts-china-cities-js.svg)](https://badge.fury.io/js/echarts-china-cities-js)
 
