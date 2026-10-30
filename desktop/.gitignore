@@ -1,8 +1,0 @@
-node_modules/
-resources/
-release/
-release-*/
-artifacts/
-electron-runtime.zip
-electron-shasums.txt
-build-tools/
